@@ -21,20 +21,28 @@ export interface QueryResponse {
 
 // Use relative path or detect the correct API URL
 const getApiBaseUrl = () => {
-  // In development, try localhost:8080, in production use relative paths
+  // Priority: explicit env var from Vite, then dev localhost, then same-origin relative
+  try {
+    // @ts-ignore - available in Vite build/dev
+    const envBase = typeof import.meta !== 'undefined' ? import.meta.env?.VITE_API_BASE_URL : undefined;
+    if (envBase && typeof envBase === 'string' && envBase.trim().length > 0) {
+      return envBase.replace(/\/$/, '');
+    }
+  } catch {}
+
   if (typeof window !== 'undefined') {
     const isDev = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
     if (isDev) {
       return 'http://localhost:8080';
     }
   }
-  return ''; // Use relative path for production
+  return '';
 };
 
 const API_BASE_URL = getApiBaseUrl();
 
 export const queryAgent = async (query: string): Promise<QueryResponse> => {
-  const apiUrl = 'http://localhost:8080/query-agent';
+  const apiUrl = `${API_BASE_URL}/query-agent`;
   console.log('🚀 Making API request to:', apiUrl);
   console.log('📝 Query:', query);
 
@@ -78,9 +86,10 @@ export const queryAgent = async (query: string): Promise<QueryResponse> => {
 
 export const checkBackendHealth = async (): Promise<boolean> => {
   try {
-    console.log('🏥 Checking backend health at: http://localhost:8080/health');
+    const healthUrl = `${API_BASE_URL}/health`;
+    console.log('🏥 Checking backend health at:', healthUrl);
     
-    const response = await fetch('http://localhost:8080/health', {
+    const response = await fetch(healthUrl, {
       method: 'GET',
     });
     
